@@ -1,40 +1,66 @@
 ---
-# Include variables and define needed variables.
-- name: Include OS-specific variables.
-  include_vars: "{{ ansible_os_family }}.yml"
+# Check firewall settings via ansible-role-firewalld
+- name: Check config firewall
+  include_role:
+    name: ansible-role-firewalld
 
-- name: Include overrides specific to RHEL 7.
-  include_vars: RedHat-7.yml
-  when:
-    - ansible_os_family == 'RedHat'
-    - ansible_distribution_major_version == "7"
-
-- name: Include overrides specific to Fedora.
-  include_vars: Fedora.yml
-  when:
-    - ansible_os_family == 'RedHat'
-    - ansible_distribution == "Fedora"
+# Check kernel settings ansible-role-sysctl
+- name: Check config sysctl
+  include_role:
+    name: sysctl
 
 # Setup/install tasks.
-- include_tasks: setup-RedHat.yml
+- include_tasks: RedHat.yml
   when: ansible_os_family == 'RedHat'
 
-- include_tasks: setup-Debian.yml
+- include_tasks: Debian.yml
   when: ansible_os_family == 'Debian'
 
-- name: Ensure directories to export exist
-  file: 'path="{{ item.strip().split()[0] }}" state=directory'
-  with_items: "{{ nfs_exports }}"
-
-- name: Copy exports file.
+- name: Copy exports file
   template:
     src: exports.j2
     dest: /etc/exports
     owner: root
     group: root
     mode: 0644
-  notify: reload nfs
+    backup: yes
+  notify:
+    - restart nfs service
 
-- name: Ensure nfs is running.
-  service: "name={{ nfs_server_daemon }} state=started enabled=yes"
-  when: nfs_exports|length
+- name: insert/update configuration block rpc conf in /etc/services
+  blockinfile:
+    path: /etc/services
+    backup: yes
+    block: |
+      # NFS ports as per the NFS-HOWTO
+      # http://www.tldp.org/HOWTO/NFS-HOWTO/security.html#FIREWALLS
+      # Listing here does not mean they will bind to these ports. 
+      rpc.nfsd        2049/tcp                        # RPC nfsd
+      rpc.nfsd        2049/udp                        # RPC nfsd
+      rpc.nfs-cb      32764/tcp                       # RPC nfs callback
+      rpc.nfs-cb      32764/udp                       # RPC nfs callback
+      rpc.statd-bc    32765/tcp                       # RPC statd broadcast
+      rpc.statd-bc    32765/udp                       # RPC statd broadcast
+      rpc.statd       32766/tcp                       # RPC statd listen
+      rpc.statd       32766/udp                       # RPC statd listen
+      rpc.mountd      32767/tcp                       # RPC mountd
+      rpc.mountd      32767/udp                       # RPC mountd
+      rpc.lockd       32768/tcp                       # RPC lockd/nlockmgr
+      rpc.lockd       32768/udp                       # RPC lockd/nlockmgr
+      rpc.quotad      32769/tcp                       # RPC quotad
+      rpc.quotad      32769/udp                       # RPC quotad
+  notify:
+    - restart nfs service
+
+- name: Start and enable NFS service (Debian 9 and RedHat 7)
+  service:
+    name: nfs-server
+    state: started
+    enabled: yes
+  when: (ansible_os_family == "Debian" and ansible_distribution_major_version >= "9") or (ansible_os_family == "RedHat" >= "7")
+  with_items:
+      - nfs-server
+      - nfs-config
+      - rpcbind
+...
+

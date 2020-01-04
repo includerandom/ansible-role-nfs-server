@@ -1,5 +1,6 @@
 ---
 nfs_exports: []
+#  - /data host001.example.com(rw,insecure,no_subtree_check,async,no_root_squash) host002.example.com(rw,insecure,no_subtree_check,async,no_root_squash)
+#  - /backup host001.example.com(rw,insecure,no_subtree_check,async,no_root_squash) host002.example.com(rw,insecure,no_subtree_check,async,no_root_squash)
+...
 
-nfs_rpcbind_state: started
-nfs_rpcbind_enabled: true

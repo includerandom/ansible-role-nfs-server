@@ -1,0 +1,48 @@
+---
+- name: Install NFS packages (RedHat)
+  yum:
+    name:
+      - nfs-utils
+      - nfs4-acl-tools
+      - rpcbind
+    state: latest
+    update_cache: yes
+  when: ansible_os_family == "RedHat"
+
+- name: Copy config nfs file (RedHat)
+  template:
+    src: nfs_redhat.j2
+    dest: /etc/sysconfig/nfs
+    owner: root
+    group: root
+    mode: 0644
+    backup: yes
+  notify:
+    - restart nfs service
+  when: ansible_os_family == "RedHat"
+
+- name: Copy config rpcbind file (RedHat)
+  template:
+    src: rpc-rquotad_redhat.j2
+    dest: /etc/sysconfig/rpc-rquotad
+    owner: root
+    group: root
+    mode: 0644
+    backup: yes
+  notify:
+    - restart nfs service
+  when: ansible_os_family == "RedHat"
+
+- name: Copy config lock file (RedHat)
+  template:
+    src: lockd.conf_redhat.j2
+    dest: /etc/modprobe.d/lockd.conf
+    owner: root
+    group: root
+    mode: 0644
+    backup: yes
+  notify:
+    - restart nfs service
+  when: ansible_os_family == "RedHat"
+...
+
