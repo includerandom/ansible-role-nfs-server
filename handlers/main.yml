@@ -5,5 +5,5 @@
 - name: restart nfs service
   systemd:
     name: nfs-server
-    state: restart
+    state: restarted
     enabled: yes
