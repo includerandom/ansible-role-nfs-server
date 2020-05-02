@@ -1,3 +1,9 @@
 ---
 - name: reload nfs
   command: 'exportfs -ra'
+
+- name: restart nfs service
+  systemd:
+    name: nfs-server
+    state: restart
+    enabled: yes
